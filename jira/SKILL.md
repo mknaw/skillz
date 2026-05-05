@@ -63,7 +63,7 @@ When creating tickets, follow these principles:
 
 2. **Avoid implementation details** - Descriptions should not prescribe specific technical solutions, code changes, or implementation approaches. Leave those decisions to the implementer.
 
-3. **End with Acceptance Criteria** - Every ticket must include an "Acceptance Criteria" section with one or more concise bullet points describing what "done" looks like.
+3. **End with Acceptance Criteria** - Every ticket must include an "Acceptance Criteria" section with one or more concise bullet points describing what "done" looks like. Don't include things that are table stakes for CI (e.g. "tests pass", "lints pass") — those are obvious and not worth spilling ink over.
 
 **Before creating a ticket**: If the problem statement or acceptance criteria are unclear from the user's request, ask clarifying questions rather than guessing.
 
@@ -88,9 +88,35 @@ acli jira workitem edit --key "KEY-123" --description "Updated description"
 
 ## Transitioning Status
 
+**Do not transition ticket statuses unless the user specifically asks to.**
+
 ```bash
 acli jira workitem transition --key "KEY-123" --status "In Progress"
 acli jira workitem transition --key "KEY-123" --status "Done"
+```
+
+## Linking Tickets
+
+List available link types:
+```bash
+acli jira workitem link type
+```
+
+Create a link between two tickets:
+```bash
+acli jira workitem link create --out KEY-123 --in KEY-456 --type Blocks --yes
+```
+
+`--out` is the outward ticket (e.g. the blocker), `--in` is the inward ticket (e.g. the blocked). Common link types: Blocks, Relates, Duplicate, Depends.
+
+List links on a ticket:
+```bash
+acli jira workitem link list --key KEY-123
+```
+
+Delete a link:
+```bash
+acli jira workitem link delete --help
 ```
 
 ## Comments
@@ -100,7 +126,20 @@ acli jira workitem comment create --key "KEY-123" --body "Comment text"
 acli jira workitem comment list --key "KEY-123"
 ```
 
+## Post-Creation: Branch Prompt
+
+After successfully creating a ticket, if the current directory is a git repository, ask the user if they'd like to check out a new branch for the work. Propose a branch name following this convention:
+
+```
+feature/{jira-key-lowercase}-{short-descriptive-slug}
+```
+
+For example, if you just created `MTR-956` with summary "Fix valid-events-iceberg-sink topics.regex to avoid matching unintended topics", propose:
+
+> Would you like me to create a branch for this? Suggested name: `feature/mtr-956-tighten-kafka-connect-regex`
+
+The slug should be a brief (3-5 word) kebab-case summary derived from the ticket, not a mechanical lowercasing of the full title. **Do not create the branch until the user confirms** (they may want to adjust the name). When confirmed, use `git checkout -B <branch-name>`.
+
 ## Tips
 - Use `--json` for structured output when parsing is needed
-- Use `--yes` to skip confirmation prompts for bulk operations
 - JQL supports: project, assignee, status, type, priority, created, updated
